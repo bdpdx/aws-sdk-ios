@@ -13,7 +13,13 @@
 // permissions and limitations under the License.
 //
 
+#import <TargetConditionals.h>
+
+#if TARGET_OS_OSX
+#import <Cocoa/Cocoa.h>
+#else
 #import <UIKit/UIKit.h>
+#endif
 
 /*!
  Project version number for the AWSCore framework.

@@ -457,6 +457,15 @@ DEPRECATED_MSG_ATTRIBUTE("Use `updateUserMetaData` for updating the user meta da
               certificateId:(NSString *)certificateId
              statusCallback:(void (^)(AWSIoTMQTTStatus status))callback;
 
+// The PKCS12 file is created from the AWS IoT certificate and private key as follows:
+// openssl pkcs12 -export -in certificate.pem.crt -inkey private.pem.key -out awsiot-identity.p12
+// The file *must* be created with a password or SecPKCS12Import() will fail.
+- (BOOL) connectWithClientId:(NSString *)clientId
+                cleanSession:(BOOL)cleanSession
+          pkcs12IdentityData:(NSData*)pkcs12IdentityData
+pkcs12IdentityDataPassphrase:(NSString *)pkcs12IdentityDataPassphrase
+              statusCallback:(void (^)(AWSIoTMQTTStatus status))callback;
+
 /**
  Initialises the MQTT session and connects to AWS IoT on port 443 using certificate-based mutual authentication
  and ALPN (Application Layer Protocol Negotiation)

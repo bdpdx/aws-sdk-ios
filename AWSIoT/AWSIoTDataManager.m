@@ -419,6 +419,21 @@ static AWSSynchronizedMutableDictionary *_serviceClients = nil;
                                   port:8883];
 }
 
+- (BOOL) connectWithClientId:(NSString *)clientId
+                cleanSession:(BOOL)cleanSession
+          pkcs12IdentityData:(NSData*)pkcs12IdentityData
+pkcs12IdentityDataPassphrase:(NSString *)pkcs12IdentityDataPassphrase
+              statusCallback:(void (^)(AWSIoTMQTTStatus status))callback
+{
+    return [self connectWithClientId:clientId
+                        cleanSession:cleanSession
+                  pkcs12IdentityData:pkcs12IdentityData
+        pkcs12IdentityDataPassphrase:pkcs12IdentityDataPassphrase
+                      statusCallback:callback
+                                port:8883];
+}
+
+
 - (BOOL)connectWithClientId:(NSString*)clientId
                cleanSession:(BOOL)cleanSession
                 certificateId:(NSString *)certificateId
@@ -463,6 +478,54 @@ static AWSSynchronizedMutableDictionary *_serviceClients = nil;
                                     willQoS:self.mqttConfiguration.lastWillAndTestament.qos
                              willRetainFlag:NO
                              statusCallback:callback];
+}
+
+- (BOOL) connectWithClientId:(NSString*)clientId
+                cleanSession:(BOOL)cleanSession
+          pkcs12IdentityData:(NSData*)pkcs12IdentityData
+pkcs12IdentityDataPassphrase:(NSString *)pkcs12IdentityDataPassphrase
+              statusCallback:(void (^)(AWSIoTMQTTStatus status))callback
+                        port:(UInt32)port
+{
+    AWSDDLogDebug(@"<<%@>>In connectWithClientID", [NSThread currentThread]);
+    AWSDDLogInfo(@"hostName: %@", self.IoTData.configuration.endpoint.hostName);
+    AWSDDLogInfo(@"URL: %@", self.IoTData.configuration.endpoint.URL);
+
+    if (clientId == nil || [clientId  isEqualToString: @""]) {
+        return false;
+    }
+
+    if (pkcs12IdentityData == nil) {
+        return false;
+    }
+
+    if (_userDidIssueConnect) {
+        //User has already connected. Can't connect multiple times, return No.
+        return NO;
+    }
+
+    _userDidIssueConnect = YES;
+    _userDidIssueDisconnect = NO;
+
+    [self.mqttClient setBaseReconnectTime:self.mqttConfiguration.baseReconnectTimeInterval];
+    [self.mqttClient setMinimumConnectionTime:self.mqttConfiguration.minimumConnectionTimeInterval];
+    [self.mqttClient setMaximumReconnectTime:self.mqttConfiguration.maximumReconnectTimeInterval];
+    [self.mqttClient setAutoResubscribe:self.mqttConfiguration.autoResubscribe];
+    [self.mqttClient setPublishRetryThrottle:self.mqttConfiguration.publishRetryThrottle];
+    [self.mqttClient setAutoResubscribe:self.mqttConfiguration.autoResubscribe];
+
+    return [self.mqttClient connectWithClientId:clientId
+                                         toHost:self.IoTData.configuration.endpoint.hostName
+                                           port:port
+                                   cleanSession:cleanSession
+                             pkcs12IdentityData:pkcs12IdentityData
+                   pkcs12IdentityDataPassphrase:pkcs12IdentityDataPassphrase
+                                      keepAlive:self.mqttConfiguration.keepAliveTimeInterval
+                                      willTopic:self.mqttConfiguration.lastWillAndTestament.topic
+                                        willMsg:[self.mqttConfiguration.lastWillAndTestament.message dataUsingEncoding:NSUTF8StringEncoding]
+                                        willQoS:self.mqttConfiguration.lastWillAndTestament.qos
+                                 willRetainFlag:NO
+                                 statusCallback:callback];
 }
 
 - (BOOL)connectUsingWebSocketWithClientId:(NSString *)clientId
