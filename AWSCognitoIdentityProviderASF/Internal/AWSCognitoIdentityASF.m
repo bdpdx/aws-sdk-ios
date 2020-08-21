@@ -1,5 +1,10 @@
+#import <TargetConditionals.h>
 #import "AWSCognitoIdentityASF.h"
+#if TARGET_OS_OSX
+#import <Cocoa/Cocoa.h>
+#else
 #import <UIKit/UIKit.h>
+#endif
 #import <CoreTelephony/CTTelephonyNetworkInfo.h>
 #import <CoreTelephony/CTCarrier.h>
 #import <sys/utsname.h>
@@ -41,24 +46,16 @@ static NSString *const AWSCognitoIdentitySimOperator = @"SimOperator"; //N/A
 static NSString *const AWSCognitoIdentityASFVersion= @"IOS20171114";
 
 + (NSString *) userContextData: (int) minTarget build: (NSString *) build userPoolId: (NSString*) userPoolId username: (NSString *) username deviceId: (NSString * _Nullable) deviceId userPoolClientId: (NSString *) userPoolClientId {
+    NSMutableDictionary * contextData= [NSMutableDictionary new];
+
+#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
+    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityPlatform value: @"OSX"];
+#else
     UIDevice *device = [UIDevice currentDevice];
-    NSBundle *bundle = [NSBundle mainBundle];
-    NSString *bundleIdentifier = [bundle bundleIdentifier];
-    NSString *buildVersion = [bundle objectForInfoDictionaryKey:(NSString*)kCFBundleVersionKey];
-    NSString *bundleVersion = [bundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
     CGRect bounds = [[UIScreen mainScreen] nativeBounds];
     CGFloat screenWidth = bounds.size.width;
     CGFloat screenHeight = bounds.size.height;
-    
-    NSDateFormatter *localTimeZoneFormatter = [NSDateFormatter new];
-    localTimeZoneFormatter.timeZone = [NSTimeZone localTimeZone];
-    localTimeZoneFormatter.dateFormat = @"Z";
-    NSString *localTimeZoneOffset = [localTimeZoneFormatter stringFromDate:[NSDate date]];
-    
-    NSString *hourOffset = [localTimeZoneOffset substringToIndex:[localTimeZoneOffset length] - 2];
-    NSString *minuteOffset = [localTimeZoneOffset substringFromIndex:[localTimeZoneOffset length] - 2];
-    NSString *timezoneOffset = [NSString stringWithFormat:@"%@:%@",hourOffset,minuteOffset];
-    NSString * locale = [[NSLocale preferredLanguages] objectAtIndex:0];
+
     CTTelephonyNetworkInfo *networkInfo = [[CTTelephonyNetworkInfo alloc] init];
     NSString * networkType = [networkInfo currentRadioAccessTechnology];
     CTCarrier *cellularProvider = [networkInfo subscriberCellularProvider];
@@ -70,33 +67,45 @@ static NSString *const AWSCognitoIdentityASFVersion= @"IOS20171114";
                                                         [AWSCognitoIdentityASF dashIfNil:[AWSCognitoIdentityASF deviceName]],
                                                         [AWSCognitoIdentityASF dashIfNil:[device systemVersion]],
                                                         [AWSCognitoIdentityASF dashIfNil:build]];
-    
-    
-    NSString * minTargetString = [NSString stringWithFormat:@"%i", minTarget];
-    
-    
-    
-    NSMutableDictionary * contextData= [NSMutableDictionary new];
-    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityAppName value:bundleIdentifier];
-    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityAppTargetSDK value: minTargetString];
-    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityAppVersion value:[NSString stringWithFormat:@"%@-%@",bundleVersion,buildVersion]];
+
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityDeviceName value:[device name]];
-    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityPhoneType value:[AWSCognitoIdentityASF deviceName]];
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityThirdPartyDeviceId value:[device identifierForVendor].UUIDString];
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityDeviceId value: ((deviceId == nil)? [device identifierForVendor].UUIDString : deviceId)]; //TODO
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityReleaseVersion value: [device systemVersion]];
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityPlatform value: [device systemName]];
-    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityBuildType value: build];
-    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityTimezone value: timezoneOffset];
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityDeviceHeight value: [NSString stringWithFormat:@"%.0f",screenHeight]];
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityDeviceWidth value: [NSString stringWithFormat:@"%.0f",screenWidth]];
-    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityDeviceLanguage value: locale];
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityCarrier value: carrier];
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityNetworkType value: networkType];
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityHasSimCard value:hasSimCard?@"true":@"false"];
-    
+    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityPhoneType value:[AWSCognitoIdentityASF deviceName]];
     [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityDeviceFingerprint value:fingerprint];
+#endif
+    NSBundle *bundle = [NSBundle mainBundle];
+    NSString *bundleIdentifier = [bundle bundleIdentifier];
+    NSString *buildVersion = [bundle objectForInfoDictionaryKey:(NSString*)kCFBundleVersionKey];
+    NSString *bundleVersion = [bundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+
+    NSDateFormatter *localTimeZoneFormatter = [NSDateFormatter new];
+    localTimeZoneFormatter.timeZone = [NSTimeZone localTimeZone];
+    localTimeZoneFormatter.dateFormat = @"Z";
+    NSString *localTimeZoneOffset = [localTimeZoneFormatter stringFromDate:[NSDate date]];
     
+    NSString *hourOffset = [localTimeZoneOffset substringToIndex:[localTimeZoneOffset length] - 2];
+    NSString *minuteOffset = [localTimeZoneOffset substringFromIndex:[localTimeZoneOffset length] - 2];
+    NSString *timezoneOffset = [NSString stringWithFormat:@"%@:%@",hourOffset,minuteOffset];
+    NSString * locale = [[NSLocale preferredLanguages] objectAtIndex:0];
+
+    NSString * minTargetString = [NSString stringWithFormat:@"%i", minTarget];
+
+    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityAppName value:bundleIdentifier];
+    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityAppTargetSDK value: minTargetString];
+    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityAppVersion value:[NSString stringWithFormat:@"%@-%@",bundleVersion,buildVersion]];
+    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityBuildType value: build];
+    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityTimezone value: timezoneOffset];
+    [AWSCognitoIdentityASF addIfNotNil: contextData key:AWSCognitoIdentityDeviceLanguage value: locale];
+
+
     if(username == nil){
         username = @"unknown";
     }

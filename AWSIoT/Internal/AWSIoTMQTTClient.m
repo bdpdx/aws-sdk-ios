@@ -282,6 +282,65 @@
     return [self connectWithCert];
 }
 
+- (BOOL) connectWithClientId:(NSString*)clientId
+                      toHost:(NSString*)host
+                        port:(UInt32)port
+                cleanSession:(BOOL)cleanSession
+          pkcs12IdentityData:(NSData*)pkcs12IdentityData
+pkcs12IdentityDataPassphrase:(NSString *)pkcs12IdentityDataPassphrase
+                   keepAlive:(UInt16)theKeepAliveInterval
+                   willTopic:(NSString*)willTopic
+                     willMsg:(NSData*)willMsg
+                     willQoS:(UInt8)willQoS
+              willRetainFlag:(BOOL)willRetainFlag
+              statusCallback:(void (^)(AWSIoTMQTTStatus status))callback {
+
+    if (self.userDidIssueConnect ) {
+        //Issuing connect multiple times. Not allowed.
+        return NO;
+    }
+    //Intialize connection state
+    self.userDidIssueDisconnect = NO;
+    self.userDidIssueConnect = YES;
+    self.session = nil;
+
+    if (pkcs12IdentityData == NULL) {
+        AWSDDLogError(@"pkcs12IdentityData is NULL");
+        return NO;
+    }
+    if (pkcs12IdentityDataPassphrase == NULL) pkcs12IdentityDataPassphrase = @"";
+
+    CFArrayRef keyRef = NULL;
+    NSDictionary *options = @{(__bridge id) kSecImportExportPassphrase: pkcs12IdentityDataPassphrase};
+
+    OSStatus sanityCheck = SecPKCS12Import((__bridge CFDataRef) pkcs12IdentityData,
+                                           (__bridge CFDictionaryRef) options,
+                                           &keyRef);
+
+    if (sanityCheck != noErr) {
+        AWSDDLogError(@"Failed to import PKCS12 identify data");
+        return NO;
+    }
+
+    CFDictionaryRef identityDictionary = CFArrayGetValueAtIndex(keyRef, 0);
+    SecIdentityRef identityRef = (SecIdentityRef) CFDictionaryGetValue(identityDictionary, kSecImportItemIdentity);
+
+    self.mqttStatus = AWSIoTMQTTStatusConnecting;
+    self.clientCerts = [[NSArray alloc] initWithObjects:(__bridge_transfer id)identityRef, nil];
+    self.host = host;
+    self.port = port;
+    self.cleanSession = cleanSession;
+    self.connectStatusCallback = callback;
+    self.clientId = clientId;
+    self.keepAliveInterval = theKeepAliveInterval;
+    self.lastWillAndTestamentTopic = willTopic;
+    self.lastWillAndTestamentMessage = willMsg;
+    self.lastWillAndTestamentQoS = willQoS;
+    self.lastWillAndTestamentRetainFlag = willRetainFlag;
+
+    return [self connectWithCert];
+}
+
 - (BOOL) connectWithCert {
     self.mqttStatus = AWSIoTMQTTStatusConnecting;
     

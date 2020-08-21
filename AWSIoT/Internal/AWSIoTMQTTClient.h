@@ -124,6 +124,23 @@
              willRetainFlag:(BOOL)willRetainFlag
              statusCallback:(void (^)(AWSIoTMQTTStatus status))callback;
 
+
+// The PKCS12 file is created from the AWS IoT certificate and private key as follows:
+// openssl pkcs12 -export -in certificate.pem.crt -inkey private.pem.key -out awsiot-identity.p12
+// The file *must* be created with a password or SecPKCS12Import() will fail.
+- (BOOL)     connectWithClientId:(NSString *)clientId
+                          toHost:(NSString *)host
+                            port:(UInt32)port
+                    cleanSession:(BOOL)cleanSession
+              pkcs12IdentityData:(NSData*)pkcs12IdentityData
+    pkcs12IdentityDataPassphrase:(NSString *)pkcs12IdentityDataPassphrase
+                       keepAlive:(UInt16)theKeepAliveInterval
+                       willTopic:(NSString*)willTopic
+                         willMsg:(NSData*)willMsg
+                         willQoS:(UInt8)willQoS
+                  willRetainFlag:(BOOL)willRetainFlag
+                  statusCallback:(void (^)(AWSIoTMQTTStatus status))callback;
+
 - (BOOL)connectWithClientId:(NSString *)clientId
                cleanSession:(BOOL)cleanSession
               configuration:(AWSServiceConfiguration *)configuration
