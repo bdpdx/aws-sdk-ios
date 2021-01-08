@@ -15,11 +15,7 @@
 
 #import "AWSService.h"
 
-#if TARGET_OS_OSX
-#import <Cocoa/Cocoa.h>
-#else
 #import <UIKit/UIKit.h>
-#endif
 #import "AWSSynchronizedMutableDictionary.h"
 #import "AWSURLResponseSerialization.h"
 #import "AWSCocoaLumberjack.h"
@@ -163,10 +159,6 @@ static NSString *const AWSServiceConfigurationUnknown = @"Unknown";
     static NSString *_userAgent = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        #if TARGET_OS_OSX
-        NSString *systemName = @"OSX";
-        NSString *systemVersion = AWSServiceConfigurationUnknown;
-        #else
         NSString *systemName = [[[UIDevice currentDevice] systemName] stringByReplacingOccurrencesOfString:@" " withString:@"-"];
         if (!systemName) {
             systemName = AWSServiceConfigurationUnknown;
@@ -175,8 +167,6 @@ static NSString *const AWSServiceConfigurationUnknown = @"Unknown";
         if (!systemVersion) {
             systemVersion = AWSServiceConfigurationUnknown;
         }
-        #endif
-
         NSString *localeIdentifier = [[NSLocale currentLocale] localeIdentifier];
         if (!localeIdentifier) {
             localeIdentifier = AWSServiceConfigurationUnknown;

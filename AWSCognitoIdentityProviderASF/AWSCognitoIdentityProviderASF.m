@@ -13,7 +13,6 @@
 // permissions and limitations under the License.
 //
 
-#import <AvailabilityMacros.h>
 #import "AWSCognitoIdentityProviderASF.h"
 #import "AWSCognitoIdentityASF.h"
 
@@ -24,14 +23,7 @@
 #ifdef DEBUG
     build = @"debug";
 #endif
-
-#if TARGET_OS_OSX
-    int userContextData = MAC_OS_X_VERSION_10_15;
-#else
-    int userContextData = __IPHONE_OS_VERSION_MIN_REQUIRED;
-#endif
-
-    return [AWSCognitoIdentityASF userContextData:  userContextData
+    return [AWSCognitoIdentityASF userContextData:  __IPHONE_OS_VERSION_MIN_REQUIRED
                                             build:build userPoolId: userPoolId username:username deviceId:deviceId userPoolClientId:userPoolClientId];
 }
 

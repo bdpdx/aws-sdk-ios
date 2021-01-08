@@ -13,8 +13,6 @@
 // permissions and limitations under the License.
 //
 
-#import <Security/Security.h>
-
 #import "AWSIoTCSR.h"
 #import "AWSIoTKeychain.h"
 
@@ -80,36 +78,13 @@ unsigned char setTag = 0x31;
     unsigned char SHA1Digest[CC_SHA1_DIGEST_LENGTH];
     CC_SHA1_Final(SHA1Digest, &SHA1Struct);
     
-#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
-    size_t blockSize = SecKeyGetBlockSize(privateKeyRef);
-    SecTransformRef transform = SecSignTransformCreate(privateKeyRef, NULL);
-
-    if (transform == NULL) return nil;
-
-    NSData *signatureData = [self executeTransform:transform
-                                         withInput:certRequestData
-                                    withDigestType:kSecDigestSHA1
-                                  withDigestLength:@(blockSize)];
-
-    CFRelease(transform);
-
-    size_t sigLen = [signatureData length];
-
-    if (sigLen <= 0) return nil;
-
-    unsigned char sig[sigLen];
-
-    memcpy(sig, [signatureData bytes], sigLen);
-#else
     unsigned char sig[256];
     size_t sigLen = sizeof(sig);
-
     OSStatus sanityCheck = SecKeyRawSign(privateKeyRef, kSecPaddingPKCS1SHA1, SHA1Digest, sizeof(SHA1Digest), sig, &sigLen);
     if (sanityCheck != noErr) {
         return nil;
     }
-#endif
-
+    
     NSMutableData * scr = [[NSMutableData alloc] initWithData:certRequestData];
     unsigned char tag[] = {0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 1, 1, 5, 0x05, 0x00};
     [scr appendBytes:tag length:sizeof(tag)];
@@ -300,28 +275,5 @@ unsigned char setTag = 0x31;
     *iterator = itr + num_bytes;
     return ret;
 }
-
-#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
-- (NSData *)executeTransform:(SecTransformRef)transform
-                   withInput:(NSData *)input
-              withDigestType:(CFStringRef)type
-            withDigestLength:(NSNumber *)length
-{
-    CFErrorRef errorRef = NULL;
-    NSData *result = nil;
-    CFTypeRef resultRef = NULL;
-    BOOL success = transform != NULL;
-
-    if (success) success = SecTransformSetAttribute(transform, kSecDigestTypeAttribute, type, &errorRef);
-    if (success) success = SecTransformSetAttribute(transform, kSecDigestLengthAttribute, (__bridge CFNumberRef) length, &errorRef);
-    if (success) success = SecTransformSetAttribute(transform, kSecTransformInputAttributeName, (__bridge CFDataRef)input, &errorRef);
-    if (success) success = (resultRef = SecTransformExecute(transform, &errorRef)) != NULL;
-    if (success) result = (__bridge_transfer NSData *)resultRef;
-
-    if (errorRef != NULL) CFRelease(errorRef);
-
-    return result;
-}
-#endif
 
 @end

@@ -14,11 +14,7 @@
 //
 
 #import "AWSNetworking.h"
-#if TARGET_OS_OSX
-#import <Cocoa/Cocoa.h>
-#else
 #import <UIKit/UIKit.h>
-#endif
 #import "AWSBolts.h"
 #import "AWSCategory.h"
 #import "AWSModel.h"

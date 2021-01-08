@@ -8,10 +8,6 @@
 
 #import "AWSUICKeyChainStore.h"
 
-#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
-#import "SecPasswordGenerate.h"
-#endif
-
 NSString * const AWSUICKeyChainStoreErrorDomain = @"com.kishikawakatsumi.uickeychainstore";
 static NSString *_defaultService;
 
@@ -1016,14 +1012,6 @@ static NSString *_defaultService;
 
 - (void)setSharedPassword:(NSString *)password forAccount:(NSString *)account completion:(void (^)(NSError *error))completion
 {
-#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
-    if (completion) {
-        NSError *error = [self.class argumentError:NSLocalizedString(@"setSharedPassword is unsupported on this platform", nil)];
-        dispatch_async(dispatch_get_main_queue(), ^{
-            completion(error);
-        });
-    }
-#else
     NSString *domain = self.server.host;
     if (domain.length > 0) {
         SecAddSharedWebCredential((__bridge CFStringRef)domain, (__bridge CFStringRef)account, (__bridge CFStringRef)password, ^(CFErrorRef error) {
@@ -1037,7 +1025,6 @@ static NSString *_defaultService;
             completion(error);
         }
     }
-#endif
 }
 
 - (void)removeSharedPasswordForAccount:(NSString *)account completion:(void (^)(NSError *error))completion
@@ -1052,14 +1039,6 @@ static NSString *_defaultService;
 
 + (void)requestSharedWebCredentialForDomain:(NSString *)domain account:(NSString *)account completion:(void (^)(NSArray UIC_CREDENTIAL_TYPE *credentials, NSError *error))completion
 {
-#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
-    if (completion) {
-        NSError *error = [self.class argumentError:NSLocalizedString(@"requestSharedWebCredentialForDomain is unsupported on this platform", nil)];
-        dispatch_async(dispatch_get_main_queue(), ^{
-            completion(nil, error);
-        });
-    }
-#else
     SecRequestSharedWebCredential((__bridge CFStringRef)domain, (__bridge CFStringRef)account, ^(CFArrayRef credentials, CFErrorRef error) {
         if (error) {
             NSError *e = (__bridge NSError *)error;
@@ -1090,46 +1069,11 @@ static NSString *_defaultService;
             completion(sharedCredentials.copy, (__bridge NSError *)error);
         }
     });
-#endif
 }
 
 + (NSString *)generatePassword
 {
-#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
-    CFErrorRef error = nil;
-    NSCharacterSet *digits = [NSCharacterSet characterSetWithCharactersInString: @"3456789"];
-    NSCharacterSet *lowercase = [NSCharacterSet characterSetWithCharactersInString: @"abcdefghkmnopqrstuvwxy"];
-    NSCharacterSet *uppercase = [NSCharacterSet characterSetWithCharactersInString: @"ABCDEFGHJKLMNPQRSTUVWXYZ"];
-    CFDictionaryRef requirements = (__bridge CFDictionaryRef) @{
-        (__bridge NSString *) kSecPasswordMinLengthKey: @12,
-        (__bridge NSString *) kSecPasswordMaxLengthKey: @12,
-        (__bridge NSString *) kSecPasswordAllowedCharactersKey: @"abcdefghkmnopqrstuvwxyABCDEFGHJKLMNPQRSTUVWXYZ3456789",
-        (__bridge NSString *) kSecPasswordRequiredCharactersKey: @[digits, lowercase, uppercase]
-    };
-    NSString *generatedPassword = (NSString *) CFBridgingRelease(SecPasswordGenerate(kSecPasswordTypeSafari, &error, requirements));
-    const char *generatedPasswordUTF8 = [generatedPassword UTF8String];
-    NSString *result = nil;
-
-    if (generatedPasswordUTF8 != nil && strlen(generatedPasswordUTF8) == 12) {
-        char password[16];
-        const char *p = generatedPasswordUTF8;
-        char *q = password;
-
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 3; ++j) {
-                *q++ = *p++;
-            }
-            *q++ = '-';
-        }
-        *q = '\0';
-
-        result = [NSString stringWithUTF8String: password];
-    }
-
-    return result;
-#else
     return CFBridgingRelease(SecCreateSharedWebCredentialPassword());
-#endif
 }
 
 #endif
